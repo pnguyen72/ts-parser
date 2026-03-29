@@ -11,3 +11,13 @@ declare namespace join {
 		? impl<tail, `${acc}${head}`>
 		: acc;
 }
+
+export interface fold<f extends Fn<[unknown, unknown]>, acc extends f["arg"][0]>
+	extends Fn {
+	return: fold.impl<f, acc, this["arg"]>;
+}
+declare namespace fold {
+	type impl<f extends Fn, acc, l> = l extends [infer head, ...infer tail]
+		? impl<f, Fn.call<f, [acc, head]>, tail>
+		: acc;
+}

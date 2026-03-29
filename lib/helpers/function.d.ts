@@ -15,10 +15,19 @@ export namespace Fn {
 		f extends Fn,
 		arg extends f["arg"],
 	> = unknown extends f["_RT"]
-		? (f & { arg: arg })["return"]
-		: (f & { arg: arg })["return"] extends infer res extends f["_RT"]
+		? callImpl<f, arg>
+		: callImpl<f, arg> extends infer res extends f["_RT"]
 			? res
 			: never;
+
+	export interface flip<f extends Fn<[unknown, unknown]>>
+		extends Fn<[f["arg"][1], f["arg"][0]]> {
+		return: call<f, [this["arg"][1], this["arg"][0]]>;
+	}
+
+	export interface revApply<T = unknown> extends Fn<[T, Fn<T>]> {
+		return: call<this["arg"][1], this["arg"][0]>;
+	}
 
 	export type pipe<acc, fs extends Fn[]> = fs extends [
 		infer head extends Fn,
@@ -39,6 +48,17 @@ export namespace Fn {
 				? fold<call<f, head>, tail>
 				: never
 		: never;
+
+	export interface curry<f extends Fn<[unknown, unknown]>>
+		extends Fn<f["arg"][0]> {
+		return: curryImpl<f, this["arg"]>;
+	}
+}
+
+type callImpl<f extends Fn, arg> = (f & { arg: arg })["return"];
+
+interface curryImpl<f extends Fn<[unknown, unknown]>, arg> extends Fn {
+	return: Fn.call<f, [arg, this["arg"]]>;
 }
 
 export type $<

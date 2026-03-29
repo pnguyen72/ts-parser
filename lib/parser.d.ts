@@ -19,14 +19,16 @@ export declare namespace success {
 		return: success<this["arg"]>;
 	}
 }
-export interface fail<e extends string> extends Parser {
-	return: Failure<e>;
+export interface fail<err extends string> extends Parser {
+	return: Failure<err>;
 }
 
 export type parse<p extends Parser, input extends string> =
 	Fn.call<p, input> extends infer res
-		? res extends Success<infer T>
-			? T
+		? res extends Success<infer T, infer remaining>
+			? remaining extends ""
+				? T
+				: Failure<`Failed to parse ${remaining}`>
 			: res
 		: never;
 
@@ -35,7 +37,7 @@ export type parse<p extends Parser, input extends string> =
 declare global {
 	interface infixOperators {
 		">>=": bind;
-		">>|": lift;
+		">>|": map;
 		"*>": sequenceR;
 		"<*": sequenceL;
 		"<|>": choice;
@@ -56,7 +58,7 @@ declare namespace bind {
 	}
 }
 
-export interface lift extends Fn<[Parser, Fn]> {
+export interface map extends Fn<[Parser, Fn]> {
 	return: $<this["arg"][0], ">>=", Fn.compose<success.fn, this["arg"][1]>>;
 }
 
@@ -128,7 +130,7 @@ export type spaces = $<
 export interface str<s extends string> extends Parser {
 	return: this["arg"] extends `${s}${infer remaining}`
 		? Success<s, remaining>
-		: Failure<`Expected ${this["arg"]}`>;
+		: Failure<`Expected ${s}`>;
 }
 
 export type num = $<
