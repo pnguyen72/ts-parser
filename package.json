@@ -1,5 +1,6 @@
 {
 	"devDependencies": {
+		"@typescript/native-preview": "7.0.0-dev.20260330.1",
 		"ts-arithmetic": "^0.1.1"
 	}
 }
