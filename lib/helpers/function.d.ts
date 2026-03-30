@@ -29,8 +29,9 @@ declare global {
 
 export interface Fn<Arg = unknown, Return = unknown> {
 	arg: Arg;
-	_RT: Return;
 	return: unknown;
+	// doesn't do anything, just to allow annotating return type for readability
+	_return: Return;
 }
 
 export namespace Fn {
@@ -38,14 +39,9 @@ export namespace Fn {
 		return: v;
 	}
 
-	export type call<
-		f extends Fn,
-		arg extends f["arg"],
-	> = unknown extends f["_RT"]
-		? callImpl<f, arg>
-		: callImpl<f, arg> extends infer res extends f["_RT"]
-			? res
-			: never;
+	export type call<f extends Fn, arg extends f["arg"]> = (f & {
+		arg: arg;
+	})["return"];
 
 	export interface flip<f extends Fn<[unknown, unknown]>>
 		extends Fn<[f["arg"][1], f["arg"][0]]> {
@@ -78,9 +74,8 @@ export namespace Fn {
 	}
 }
 
-type callImpl<f extends Fn, arg> = (f & { arg: arg })["return"];
-
-interface chainImpl<f extends Fn, g extends Fn> extends Fn<f["arg"], g["_RT"]> {
+interface chainImpl<f extends Fn, g extends Fn>
+	extends Fn<f["arg"], g["_return"]> {
 	return: $<this["arg"], "|>", f, "|>", g>;
 }
 
