@@ -11,6 +11,17 @@ export type evaluate<input extends string> = parse<
 type token<p extends Parser> = $<p, "<-", spaces>;
 type strToken<s extends string> = token<str<s>>;
 
+type chain<head extends Parser, tail extends Parser> = $<
+	head,
+	">>=",
+	chain.loop<tail>
+>;
+declare namespace chain {
+	interface loop<tail extends Parser> extends Fn<number, Parser> {
+		return: $<many<tail>, ">>|", List.fold<Fn.apply, this["arg"]>>;
+	}
+}
+
 interface group extends Parser {
 	return: $<
 		this["arg"],
@@ -35,32 +46,27 @@ declare namespace factor {
 	type multiplier = { "+": 1; "-": -1; "": 1 };
 }
 
-type term = $<factor, ">>=", term.loop>;
-declare namespace term {
+type juxtapos = $<factor, ">>=", juxtapos.loop>;
+declare namespace juxtapos {
 	interface loop extends Fn<number, Parser> {
-		return: $<
-			many<$<group, "||", $<strToken<"*">, "->", factor>>>,
-			">>|",
-			List.fold<Num.multiply, this["arg"]>
-		>;
+		return: $<many<group>, ">>|", List.fold<Num.multiply, this["arg"]>>;
 	}
 }
 
-type expr = $<term, ">>=", expr.loop>;
-declare namespace expr {
-	interface loop extends Fn<number, Parser> {
-		return: $<
-			many<
-				$<
-					$<strToken<"+">, "->", term, ">>|", add>,
-					"||",
-					$<strToken<"-">, "->", term, ">>|", subtract>
-				>
-			>,
-			">>|",
-			List.fold<Fn.apply, this["arg"]>
-		>;
-	}
-	type add = Fn.curry<Num.add>;
-	type subtract = Fn.curry<Fn.flip<Num.subtract>>;
-}
+type term = chain<
+	juxtapos,
+	$<
+		$<strToken<"*">, "->", juxtapos, ">>|", Fn.curry<Num.multiply>>,
+		"||",
+		$<strToken<"/">, "->", juxtapos, ">>|", Fn.curry<Fn.flip<Num.divide>>>
+	>
+>;
+
+type expr = chain<
+	term,
+	$<
+		$<strToken<"+">, "->", term, ">>|", Fn.curry<Num.add>>,
+		"||",
+		$<strToken<"-">, "->", term, ">>|", Fn.curry<Fn.flip<Num.subtract>>>
+	>
+>;
