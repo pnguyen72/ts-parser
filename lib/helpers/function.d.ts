@@ -1,12 +1,10 @@
-import type { nil } from "./nil";
-
 export type $<
 	arg0,
 	op1 extends keyof infixOperators,
 	arg1,
-	op2 extends keyof infixOperators | nil = nil,
-	arg2 = unknown,
-> = infix<[arg0, op1, arg1, ...(op2 extends nil ? [] : [op2, arg2])]>;
+	op2 extends keyof infixOperators = never,
+	arg2 = never,
+> = infix<[arg0, op1, arg1, ...([op2] extends [never] ? [] : [op2, arg2])]>;
 type infix<args> = args extends [
 	infer arg0,
 	infer op extends keyof infixOperators,
