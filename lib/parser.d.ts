@@ -38,9 +38,10 @@ declare global {
 	interface infixOperators {
 		">>=": bind;
 		">>|": map;
-		"*>": sequenceR;
-		"<*": sequenceL;
-		"<|>": choice;
+		"*>": keepRight;
+		"<*": keepLeft;
+		"||": choice;
+		"&&": both;
 	}
 }
 
@@ -58,18 +59,39 @@ declare namespace bind {
 	}
 }
 
-export interface map extends Fn<[Parser, Fn]> {
-	return: $<this["arg"][0], ">>=", Fn.compose<success.fn, this["arg"][1]>>;
+export interface both extends Fn<[Parser, Parser]> {
+	return: map2<this["arg"][0], this["arg"][1], both.pair>;
+}
+declare namespace both {
+	interface pair extends Fn<[unknown, unknown]> {
+		return: [this["arg"][0], this["arg"][1]];
+	}
 }
 
-export interface sequenceR extends Fn<[Parser, Parser]> {
+export interface map extends Fn<[Parser, Fn]> {
+	return: $<this["arg"][0], ">>=", $<success.fn, "<<", this["arg"][1]>>;
+}
+
+export type map2<
+	p1 extends Parser,
+	p2 extends Parser,
+	f extends Fn<[unknown, unknown]>,
+> = $<p1, ">>=", map2.aux<p2, f>>;
+declare namespace map2 {
+	interface aux<p2 extends Parser, f extends Fn<[unknown, unknown]>>
+		extends Fn<unknown, Parser> {
+		return: $<p2, ">>=", $<success.fn, "<<", Fn.bind<f, this["arg"]>>>;
+	}
+}
+
+export interface keepRight extends Fn<[Parser, Parser]> {
 	return: $<this["arg"][0], ">>=", Fn.constant<this["arg"][1]>>;
 }
 
-export interface sequenceL extends Fn<[Parser, Parser]> {
-	return: $<this["arg"][0], ">>=", sequenceL.aux<this["arg"][1]>>;
+export interface keepLeft extends Fn<[Parser, Parser]> {
+	return: $<this["arg"][0], ">>=", keepLeft.aux<this["arg"][1]>>;
 }
-declare namespace sequenceL {
+declare namespace keepLeft {
 	interface aux<other extends Parser> extends Fn<unknown, Parser> {
 		return: $<other, "*>", success<this["arg"]>>;
 	}
@@ -94,6 +116,18 @@ export interface advance extends Parser {
 		: Failure<`Unexpected end of input`>;
 }
 
+export interface optional<p extends Parser> extends Parser {
+	return: optional.impl<p, this["arg"]>;
+}
+declare namespace optional {
+	type impl<p extends Parser, input extends string> =
+		Fn.call<p, input> extends infer res
+			? res extends Success<infer T, infer remaining>
+				? Success<T, remaining>
+				: Success<"", input>
+			: never;
+}
+
 export interface many<p extends Parser> extends Parser {
 	return: many.impl<p, this["arg"]>;
 }
@@ -112,38 +146,32 @@ declare namespace many {
 export type many1<p extends Parser> = $<p, ">>=", many1.aux<p>>;
 declare namespace many1 {
 	interface aux<p extends Parser> extends Fn<unknown, Parser> {
-		return: $<many<p>, ">>=", Fn.compose<success.fn, concat<this["arg"]>>>;
-	}
-	interface concat<head> extends Fn {
-		return: this["arg"] extends infer tail extends unknown[]
-			? [head, ...tail]
-			: never;
+		return: $<
+			many<p>,
+			">>=",
+			$<success.fn, "<<", Fn.bind<List.cons, this["arg"]>>
+		>;
 	}
 }
 
 export type spaces = $<
-	many<$<str<" ">, "<|>", str<"\t">, "<|>", str<"\n">>>,
+	many<$<str<" ">, "||", str<"\t">, "||", str<"\n">>>,
 	">>|",
 	Fn.constant<never>
 >;
 
 export interface str<s extends string> extends Parser {
-	return: this["arg"] extends `${s}${infer remaining}`
-		? Success<s, remaining>
+	return: this["arg"] extends `${infer matched extends s}${infer remaining}`
+		? Success<matched, remaining>
 		: Failure<`Expected ${s}`>;
 }
 
-export type num = $<
-	many1<num.digit>,
+export type int = $<
+	$<
+		optional<str<"+" | "-">>,
+		"&&",
+		many1<str<"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9">>
+	>,
 	">>|",
-	Fn.compose<Num.fromStr, List.join>
+	$<Num.fromStr, "<<", List.join, "<<", List.cons>
 >;
-declare namespace num {
-	export type digit = $<advance, ">>=", isDigit>;
-	interface isDigit extends Fn<string, Parser> {
-		return: this["arg"] extends char
-			? success<this["arg"]>
-			: fail<`Expected digit, got ${this["arg"]}`>;
-	}
-	type char = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
-}

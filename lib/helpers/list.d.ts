@@ -21,3 +21,9 @@ declare namespace fold {
 		? impl<f, Fn.call<f, [acc, head]>, tail>
 		: acc;
 }
+
+export interface cons extends Fn<[unknown, unknown]> {
+	return: this["arg"] extends [infer head, infer tail extends unknown[]]
+		? [head, ...tail]
+		: never;
+}

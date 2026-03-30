@@ -1,24 +1,23 @@
 import type { $, Fn } from "./helpers/function";
 import type * as List from "./helpers/list";
 import type * as Num from "./helpers/number";
-import type { parse as _parse, many, num, Parser, spaces, str } from "./parser";
+import type { parse as _parse, int, many, Parser, spaces, str } from "./parser";
 
 export type parse<input extends string> = _parse<expr, input>;
 
-type numTok = $<num, "<*", spaces>;
-type strTok<s extends string> = $<str<s>, "<*", spaces>;
+type token<s extends string> = $<str<s>, "<*", spaces>;
 
-interface group extends Parser {
-	return: Fn.call<$<strTok<"(">, "*>", expr, "<*", strTok<")">>, this["arg"]>;
+interface factor extends Parser {
+	return: Fn.call<$<int, "<*", spaces, "||", group>, this["arg"]>;
 }
 
-type factor = $<numTok, "<|>", group>;
+type group = $<token<"(">, "*>", expr, "<*", token<")">>;
 
 type term = $<factor, ">>=", term.loop>;
 declare namespace term {
 	interface loop extends Fn<number, Parser> {
 		return: $<
-			many<$<strTok<"*">, "*>", factor, "<|>", group>>,
+			many<$<token<"*">, "*>", factor, "||", group>>,
 			">>|",
 			List.fold<Num.multiply, this["arg"]>
 		>;
@@ -31,15 +30,13 @@ declare namespace expr {
 		return: $<
 			many<
 				$<
-					$<strTok<"+">, "*>", term, ">>|", add>,
-					"<|>",
-					$<strTok<"-">, "*>", term, ">>|", subtract>
+					$<token<"+">, "*>", term, ">>|", Fn.curry<Num.add>>,
+					"||",
+					$<token<"-">, "*>", term, ">>|", Fn.curry<Fn.flip<Num.subtract>>>
 				>
 			>,
 			">>|",
-			List.fold<Fn.revApply, this["arg"]>
+			List.fold<Fn.apply, this["arg"]>
 		>;
 	}
-	type add = Fn.curry<Num.add>;
-	type subtract = Fn.curry<Fn.flip<Num.subtract>>;
 }

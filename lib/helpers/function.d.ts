@@ -25,20 +25,12 @@ export namespace Fn {
 		return: call<f, [this["arg"][1], this["arg"][0]]>;
 	}
 
-	export interface revApply<T = unknown> extends Fn<[T, Fn<T>]> {
+	export interface apply<T = unknown> extends Fn<[T, Fn<T>]> {
 		return: call<this["arg"][1], this["arg"][0]>;
 	}
 
-	export type pipe<acc, fs extends Fn[]> = fs extends [
-		infer head extends Fn,
-		...infer tail extends Fn[],
-	]
-		? pipe<call<head, acc>, tail>
-		: acc;
-
-	export interface compose<f extends Fn, g extends Fn>
-		extends Fn<g["arg"], f["_RT"]> {
-		return: call<f, call<g, this["arg"]>>;
+	export interface compose extends Fn<[Fn, Fn]> {
+		return: composeImpl<this["arg"][0], this["arg"][1]>;
 	}
 
 	export type fold<f, args extends unknown[]> = f extends Fn
@@ -53,9 +45,25 @@ export namespace Fn {
 		extends Fn<f["arg"][0]> {
 		return: curryImpl<f, this["arg"]>;
 	}
+
+	export type bind<
+		f extends Fn<[unknown, unknown]>,
+		arg extends f["arg"][0],
+	> = call<curry<f>, arg>;
+}
+
+declare global {
+	interface infixOperators {
+		"<<": Fn.compose;
+	}
 }
 
 type callImpl<f extends Fn, arg> = (f & { arg: arg })["return"];
+
+interface composeImpl<f extends Fn, g extends Fn>
+	extends Fn<g["arg"], f["_RT"]> {
+	return: Fn.call<f, Fn.call<g, this["arg"]>>;
+}
 
 interface curryImpl<f extends Fn<[unknown, unknown]>, arg> extends Fn {
 	return: Fn.call<f, [arg, this["arg"]]>;
