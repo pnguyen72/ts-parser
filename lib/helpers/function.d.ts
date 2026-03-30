@@ -11,8 +11,7 @@ type infix<args> = args extends [
 	infer arg1,
 	...infer rest,
 ]
-	? // @ts-expect-error: cannot type-check that arg0, arg1 are valid args for op
-		infix<[Fn.call<infixOperators[op], [arg0, arg1]>, ...rest]>
+	? infix<[Fn.call<infixOperators[op], [arg0, arg1]>, ...rest]>
 	: args extends [infer only]
 		? only
 		: never;
@@ -37,7 +36,7 @@ export namespace Fn {
 		return: v;
 	}
 
-	export type call<f extends Fn, arg extends f["arg"]> = (f & {
+	export type call<f extends Fn, arg> = (f & {
 		arg: arg;
 	})["return"];
 
