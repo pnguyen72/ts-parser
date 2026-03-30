@@ -5,15 +5,15 @@ export type $<
 	op2 extends keyof InfixOperators = never,
 	arg2 = never,
 > = [op2] extends [never]
-	? Fn.call<InfixOperators[op1], [arg0, arg1]>
-	: $<Fn.call<InfixOperators[op1], [arg0, arg1]>, op2, arg2>;
+	? callImpl<InfixOperators[op1], [arg0, arg1]>
+	: $<callImpl<InfixOperators[op1], [arg0, arg1]>, op2, arg2>;
 
 declare global {
 	interface InfixOperators {
 		">>": Fn.chain;
+		"<|": Fn.call;
 		"|>": Fn.apply;
-		"<|": Fn.flip<Fn.apply>;
-		"||>": Fn.bind;
+		"<|>>": Fn.bind;
 	}
 }
 
@@ -25,22 +25,24 @@ export interface Fn<Arg = unknown, Return = unknown> {
 }
 
 export namespace Fn {
+	export interface id<T = unknown> extends Fn<T> {
+		return: this["arg"];
+	}
+
 	export interface constant<v> extends Fn<unknown, v> {
 		return: v;
 	}
 
-	export type call<f extends Fn, arg> = (f & {
-		arg: arg;
-	})["return"];
+	export interface call extends Fn<[Fn, unknown]> {
+		return: callImpl<this["arg"][0], this["arg"][1]>;
+	}
 
 	export interface flip<f extends Fn<[unknown, unknown]>>
 		extends Fn<[f["arg"][1], f["arg"][0]]> {
-		return: call<f, [this["arg"][1], this["arg"][0]]>;
+		return: callImpl<f, [this["arg"][1], this["arg"][0]]>;
 	}
 
-	export interface apply<T = unknown> extends Fn<[T, Fn<T>]> {
-		return: call<this["arg"][1], this["arg"][0]>;
-	}
+	export type apply = flip<call>;
 
 	export interface chain extends Fn<[Fn, Fn]> {
 		return: chainImpl<this["arg"][0], this["arg"][1]>;
@@ -56,16 +58,18 @@ export namespace Fn {
 	}
 }
 
+type callImpl<f extends Fn, arg> = (f & { arg: arg })["return"];
+
 interface chainImpl<f extends Fn, g extends Fn>
 	extends Fn<f["arg"], g["_return"]> {
 	return: $<this["arg"], "|>", f, "|>", g>;
 }
 
 interface curryImpl<f extends Fn<[unknown, unknown]>, arg> extends Fn {
-	return: Fn.call<f, [arg, this["arg"]]>;
+	return: callImpl<f, [arg, this["arg"]]>;
 }
 
 type bindImpl<
 	arg extends f["arg"][0],
 	f extends Fn<[unknown, unknown]>,
-> = Fn.call<Fn.curry<f>, arg>;
+> = callImpl<Fn.curry<f>, arg>;

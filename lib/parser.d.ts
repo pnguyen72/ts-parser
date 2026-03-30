@@ -1,27 +1,15 @@
 import type { $, Fn } from "./helpers/function";
 import type * as List from "./helpers/list";
-import type * as Num from "./helpers/number";
 
 /* Parser type */
 
-export type Success<T = unknown, remaining extends string = string> = {
+type Success<T = unknown, remaining extends string = string> = {
 	result: T;
 	remaining: remaining;
 };
-export type Failure<message = unknown> = { error: message };
-export type Parser = Fn<string, Success | Failure>;
+type Failure<message = unknown> = { error: message };
 
-export interface success extends Fn<unknown, Parser> {
-	return: success.impl<this["arg"]>;
-}
-export declare namespace success {
-	interface impl<T> extends Parser {
-		return: Success<T, this["arg"]>;
-	}
-}
-export interface fail<err extends string> extends Parser {
-	return: Failure<err>;
-}
+export type Parser = Fn<string, Success | Failure>;
 
 export type parse<p extends Parser, input extends string> =
 	$<p, "<|", input> extends infer res
@@ -32,7 +20,7 @@ export type parse<p extends Parser, input extends string> =
 			: res
 		: never;
 
-/* Combinators */
+/* Monadic operations */
 
 declare global {
 	interface InfixOperators {
@@ -40,8 +28,17 @@ declare global {
 		">>|": map;
 		"->": keepRight;
 		"<-": keepLeft;
-		"||": choice;
-		"&&": both;
+		"<|>": choice;
+		"<&>": both;
+	}
+}
+
+export interface success extends Fn<unknown, Parser> {
+	return: success.impl<this["arg"]>;
+}
+export declare namespace success {
+	interface impl<T> extends Parser {
+		return: Success<T, this["arg"]>;
 	}
 }
 
@@ -56,18 +53,6 @@ declare namespace bind {
 				? $<f, "<|", T, "<|", remaining>
 				: res
 			: never;
-	}
-}
-
-export interface both extends Fn<[Parser, Parser]> {
-	return: $<this["arg"][0], ">>=", both.aux<this["arg"][1]>>;
-}
-declare namespace both {
-	interface aux<p2 extends Parser> extends Fn<unknown, Parser> {
-		return: $<p2, ">>=", $<pair<this["arg"]>, ">>", success>>;
-	}
-	interface pair<first> extends Fn<unknown, [unknown, unknown]> {
-		return: [first, this["arg"]];
 	}
 }
 
@@ -108,6 +93,16 @@ declare namespace choice {
 	}
 }
 
+export interface both extends Fn<[Parser, Parser]> {
+	return: $<this["arg"][0], ">>=", both.aux<this["arg"][1]>>;
+}
+declare namespace both {
+	interface aux<p2 extends Parser> extends Fn<unknown, Parser> {
+		return: $<p2, ">>=", $<this["arg"], "|>", pair, ">>", success>>;
+	}
+	type pair = Fn.curry<Fn.id<[unknown, unknown]>>;
+}
+
 /* Basic parsers */
 
 export interface many<p extends Parser> extends Parser {
@@ -129,12 +124,12 @@ declare namespace many {
 export type many1<p extends Parser> = $<p, ">>=", many1.aux<p>>;
 declare namespace many1 {
 	interface aux<p extends Parser> extends Fn<unknown, Parser> {
-		return: $<many<p>, ">>=", $<this["arg"], "||>", List.cons, ">>", success>>;
+		return: $<many<p>, ">>=", $<this["arg"], "<|>>", List.cons, ">>", success>>;
 	}
 }
 
 export type spaces = $<
-	many<$<str<" ">, "||", str<"\t">, "||", str<"\n">>>,
+	many<$<str<" ">, "<|>", str<"\t">, "<|>", str<"\n">>>,
 	">>|",
 	Fn.constant<never>
 >;
@@ -144,9 +139,3 @@ export interface str<s extends string> extends Parser {
 		? Success<matched, remaining>
 		: Failure<`Expected ${s}`>;
 }
-
-export type num = $<
-	many1<str<"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9">>,
-	">>|",
-	$<List.join, ">>", Num.fromStr>
->;
