@@ -8,7 +8,7 @@ export type Success<T = unknown, remaining extends string = string> = {
 	result: T;
 	remaining: remaining;
 };
-export type Failure<message extends string = string> = { error: message };
+export type Failure<message = unknown> = { error: message };
 export type Parser = Fn<string, Success | Failure>;
 
 export interface success extends Fn<unknown, Parser> {
@@ -28,7 +28,7 @@ export type parse<p extends Parser, input extends string> =
 		? res extends Success<infer T, infer remaining>
 			? remaining extends ""
 				? T
-				: Failure<`Failed to parse ${remaining}`>
+				: Failure<[T, `Discarded ${remaining}`]>
 			: res
 		: never;
 
@@ -102,9 +102,18 @@ export interface choice extends Fn<[Parser, Parser]> {
 }
 declare namespace choice {
 	interface impl<p1 extends Parser, p2 extends Parser> extends Parser {
-		return: $<p1, "<|", this["arg"]> extends infer success extends Success
-			? success
-			: $<p2, "<|", this["arg"]>;
+		return: $<p1, "<|", this["arg"]> extends infer res1
+			? res1 extends Success
+				? res1
+				: $<p2, "<|", this["arg"]> extends infer res2
+					? res2 extends Success
+						? res2
+						: Failure<
+								| (res1 extends Failure<infer e1> ? e1 : never)
+								| (res2 extends Failure<infer e2> ? e2 : never)
+							>
+					: never
+			: never;
 	}
 }
 
@@ -125,6 +134,7 @@ declare namespace many {
 				: Success<acc, input>
 			: never;
 }
+
 export type many1<p extends Parser> = $<p, ">>=", many1.aux<p>>;
 declare namespace many1 {
 	interface aux<p extends Parser> extends Fn<unknown, Parser> {
