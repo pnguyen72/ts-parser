@@ -27,7 +27,7 @@ type factor = $<
 declare namespace factor {
 	type sign = token<optional<str<"+" | "-">>>;
 	interface applySign extends Fn<["+" | "-" | "", number], number> {
-		return: $<[multiplier[this["arg"][0]], this["arg"][1]], "|>", Num.multiply>;
+		return: $<multiplier[this["arg"][0]], "*", this["arg"][1]>;
 	}
 	type multiplier = { "+": 1; "-": -1; "": 1 };
 }
