@@ -24,7 +24,7 @@ export interface fail<err extends string> extends Parser {
 }
 
 export type parse<p extends Parser, input extends string> =
-	$<input, "|>", p> extends infer res
+	$<p, "<|", input> extends infer res
 		? res extends Success<infer T, infer remaining>
 			? remaining extends ""
 				? T
@@ -51,7 +51,7 @@ export interface bind extends Fn<[Parser, Fn<unknown, Parser>]> {
 declare namespace bind {
 	interface impl<p extends Parser, f extends Fn<unknown, Parser>>
 		extends Parser {
-		return: $<this["arg"], "|>", p> extends infer res
+		return: $<p, "<|", this["arg"]> extends infer res
 			? res extends Success<infer T, infer remaining>
 				? $<f, "<|", T, "<|", remaining>
 				: res
@@ -102,9 +102,9 @@ export interface choice extends Fn<[Parser, Parser]> {
 }
 declare namespace choice {
 	interface impl<p1 extends Parser, p2 extends Parser> extends Parser {
-		return: $<this["arg"], "|>", p1> extends infer success extends Success
+		return: $<p1, "<|", this["arg"]> extends infer success extends Success
 			? success
-			: $<this["arg"], "|>", p2>;
+			: $<p2, "<|", this["arg"]>;
 	}
 }
 
@@ -115,7 +115,7 @@ export interface optional<p extends Parser> extends Parser {
 }
 declare namespace optional {
 	type impl<p extends Parser, input extends string> =
-		$<input, "|>", p> extends infer res
+		$<p, "<|", input> extends infer res
 			? res extends Success<infer T, infer remaining>
 				? Success<T, remaining>
 				: Success<"", input>
@@ -131,7 +131,7 @@ declare namespace many {
 		input extends string,
 		acc extends unknown[] = [],
 	> =
-		$<input, "|>", p> extends infer res
+		$<p, "<|", input> extends infer res
 			? res extends Success<infer T, infer remaining>
 				? impl<p, remaining, [...acc, T]>
 				: Success<acc, input>
