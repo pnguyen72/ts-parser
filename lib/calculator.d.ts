@@ -49,13 +49,15 @@ declare namespace expr {
 		return: $<
 			many<
 				$<
-					$<strToken<"+">, "->", term, ">>|", Fn.curry<Num.add>>,
+					$<strToken<"+">, "->", term, ">>|", add>,
 					"||",
-					$<strToken<"-">, "->", term, ">>|", Fn.curry<Fn.flip<Num.subtract>>>
+					$<strToken<"-">, "->", term, ">>|", subtract>
 				>
 			>,
 			">>|",
 			List.fold<Fn.apply, this["arg"]>
 		>;
 	}
+	type add = Fn.curry<Num.add>;
+	type subtract = Fn.curry<Fn.flip<Num.subtract>>;
 }
