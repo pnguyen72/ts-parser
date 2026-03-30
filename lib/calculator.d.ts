@@ -1,7 +1,7 @@
 import type { $, Fn } from "./helpers/function";
 import type * as List from "./helpers/list";
 import type * as Num from "./helpers/number";
-import type { many, num, optional, Parser, parse, spaces, str } from "./parser";
+import type { many, num, Parser, parse, spaces, str } from "./parser";
 
 export type evaluate<input extends string> = parse<
 	$<spaces, "->", expr>,
@@ -20,14 +20,17 @@ interface group extends Parser {
 }
 
 type factor = $<
-	$<factor.sign, "&&", $<token<num>, "||", group>>,
+	$<factor.signs, "&&", $<token<num>, "||", group>>,
 	">>|",
-	factor.applySign
+	factor.applySigns
 >;
 declare namespace factor {
-	type sign = token<optional<str<"+" | "-">>>;
-	interface applySign extends Fn<["+" | "-" | "", number], number> {
-		return: $<multiplier[this["arg"][0]], "*", this["arg"][1]>;
+	type signs = many<token<str<"+" | "-">>>;
+	interface applySigns extends Fn<[unknown, number], number> {
+		return: $<List.fold<applySign, this["arg"][1]>, "<|", this["arg"][0]>;
+	}
+	interface applySign extends Fn<[number, "+" | "-" | ""], number> {
+		return: $<this["arg"][0], "*", multiplier[this["arg"][1]]>;
 	}
 	type multiplier = { "+": 1; "-": -1; "": 1 };
 }

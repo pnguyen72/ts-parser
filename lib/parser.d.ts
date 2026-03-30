@@ -110,18 +110,6 @@ declare namespace choice {
 
 /* Basic parsers */
 
-export interface optional<p extends Parser> extends Parser {
-	return: optional.impl<p, this["arg"]>;
-}
-declare namespace optional {
-	type impl<p extends Parser, input extends string> =
-		$<p, "<|", input> extends infer res
-			? res extends Success<infer T, infer remaining>
-				? Success<T, remaining>
-				: Success<"", input>
-			: never;
-}
-
 export interface many<p extends Parser> extends Parser {
 	return: many.impl<p, this["arg"]>;
 }
