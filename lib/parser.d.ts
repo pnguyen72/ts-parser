@@ -60,28 +60,19 @@ declare namespace bind {
 }
 
 export interface both extends Fn<[Parser, Parser]> {
-	return: map2<this["arg"][0], this["arg"][1], both.pair>;
+	return: $<this["arg"][0], ">>=", both.aux<this["arg"][1]>>;
 }
 declare namespace both {
-	interface pair extends Fn<[unknown, unknown]> {
-		return: [this["arg"][0], this["arg"][1]];
+	interface aux<p2 extends Parser> extends Fn<unknown, Parser> {
+		return: $<p2, ">>=", $<pair<this["arg"]>, ">>", success>>;
+	}
+	interface pair<first> extends Fn<unknown, [unknown, unknown]> {
+		return: [first, this["arg"]];
 	}
 }
 
 export interface map extends Fn<[Parser, Fn]> {
 	return: $<this["arg"][0], ">>=", $<this["arg"][1], ">>", success>>;
-}
-
-export type map2<
-	p1 extends Parser,
-	p2 extends Parser,
-	f extends Fn<[unknown, unknown]>,
-> = $<p1, ">>=", map2.aux<p2, f>>;
-declare namespace map2 {
-	interface aux<p2 extends Parser, f extends Fn<[unknown, unknown]>>
-		extends Fn<unknown, Parser> {
-		return: $<p2, ">>=", $<this["arg"], "||>", f, ">>", success>>;
-	}
 }
 
 export interface keepRight extends Fn<[Parser, Parser]> {
