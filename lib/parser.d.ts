@@ -53,7 +53,7 @@ declare namespace bind {
 		extends Parser {
 		return: $<this["arg"], "|>", p> extends infer res
 			? res extends Success<infer T, infer remaining>
-				? Fn.fold<f, [T, remaining]>
+				? $<f, "<|", T, "<|", remaining>
 				: res
 			: never;
 	}

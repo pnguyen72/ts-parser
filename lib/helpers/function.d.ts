@@ -20,6 +20,7 @@ declare global {
 	interface infixOperators {
 		">>": Fn.chain;
 		"|>": Fn.apply;
+		"<|": Fn.flip<Fn.apply>;
 		"||>": Fn.bind;
 	}
 }
@@ -52,14 +53,6 @@ export namespace Fn {
 	export interface chain extends Fn<[Fn, Fn]> {
 		return: chainImpl<this["arg"][0], this["arg"][1]>;
 	}
-
-	export type fold<f, args extends unknown[]> = f extends Fn
-		? args extends [infer only]
-			? call<f, only>
-			: args extends [infer head, ...infer tail]
-				? fold<call<f, head>, tail>
-				: never
-		: never;
 
 	export interface curry<f extends Fn<[unknown, unknown]>>
 		extends Fn<f["arg"][0]> {
