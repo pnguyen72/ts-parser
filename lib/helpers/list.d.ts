@@ -18,7 +18,7 @@ export interface fold<f extends Fn<[unknown, unknown]>, acc extends f["arg"][0]>
 }
 declare namespace fold {
 	type impl<f extends Fn, acc, l> = l extends [infer head, ...infer tail]
-		? impl<f, $<[acc, head], "|>", f>, tail>
+		? impl<f, $<f, "<|", [acc, head]>, tail>
 		: acc;
 }
 

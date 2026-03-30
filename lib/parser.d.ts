@@ -35,7 +35,7 @@ export type parse<p extends Parser, input extends string> =
 /* Combinators */
 
 declare global {
-	interface infixOperators {
+	interface InfixOperators {
 		">>=": bind;
 		">>|": map;
 		"->": keepRight;

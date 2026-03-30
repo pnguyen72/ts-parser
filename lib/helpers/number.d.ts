@@ -15,7 +15,7 @@ declare namespace fromStr {
 }
 
 declare global {
-	interface infixOperators {
+	interface InfixOperators {
 		"+": add;
 		"-": subtract;
 		"*": multiply;

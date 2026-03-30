@@ -1,23 +1,15 @@
 export type $<
 	arg0,
-	op1 extends keyof infixOperators,
+	op1 extends keyof InfixOperators,
 	arg1,
-	op2 extends keyof infixOperators = never,
+	op2 extends keyof InfixOperators = never,
 	arg2 = never,
-> = infix<[arg0, op1, arg1, ...([op2] extends [never] ? [] : [op2, arg2])]>;
-type infix<args> = args extends [
-	infer arg0,
-	infer op extends keyof infixOperators,
-	infer arg1,
-	...infer rest,
-]
-	? infix<[Fn.call<infixOperators[op], [arg0, arg1]>, ...rest]>
-	: args extends [infer only]
-		? only
-		: never;
+> = [op2] extends [never]
+	? Fn.call<InfixOperators[op1], [arg0, arg1]>
+	: $<Fn.call<InfixOperators[op1], [arg0, arg1]>, op2, arg2>;
 
 declare global {
-	interface infixOperators {
+	interface InfixOperators {
 		">>": Fn.chain;
 		"|>": Fn.apply;
 		"<|": Fn.flip<Fn.apply>;
