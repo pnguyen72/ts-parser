@@ -1,5 +1,24 @@
 import type { nil } from "./nil";
 
+export type $<
+	arg0,
+	op1 extends keyof infixOperators,
+	arg1,
+	op2 extends keyof infixOperators | nil = nil,
+	arg2 = unknown,
+> = infix<[arg0, op1, arg1, ...(op2 extends nil ? [] : [op2, arg2])]>;
+type infix<args> = args extends [
+	infer arg0,
+	infer op extends keyof infixOperators,
+	infer arg1,
+	...infer rest,
+]
+	? // @ts-expect-error: cannot type-check that arg0, arg1 are valid args for op
+		infix<[Fn.call<infixOperators[op], [arg0, arg1]>, ...rest]>
+	: args extends [infer only]
+		? only
+		: never;
+
 export interface Fn<Arg = unknown, Return = unknown> {
 	arg: Arg;
 	_RT: Return;
@@ -29,8 +48,8 @@ export namespace Fn {
 		return: call<this["arg"][1], this["arg"][0]>;
 	}
 
-	export interface compose extends Fn<[Fn, Fn]> {
-		return: composeImpl<this["arg"][0], this["arg"][1]>;
+	export interface chain extends Fn<[Fn, Fn]> {
+		return: chainImpl<this["arg"][0], this["arg"][1]>;
 	}
 
 	export type fold<f, args extends unknown[]> = f extends Fn
@@ -54,36 +73,17 @@ export namespace Fn {
 
 declare global {
 	interface infixOperators {
-		"<<": Fn.compose;
+		">>": Fn.chain;
+		"|>": Fn.apply;
 	}
 }
 
 type callImpl<f extends Fn, arg> = (f & { arg: arg })["return"];
 
-interface composeImpl<f extends Fn, g extends Fn>
-	extends Fn<g["arg"], f["_RT"]> {
-	return: Fn.call<f, Fn.call<g, this["arg"]>>;
+interface chainImpl<f extends Fn, g extends Fn> extends Fn<f["arg"], g["_RT"]> {
+	return: $<this["arg"], "|>", f, "|>", g>;
 }
 
 interface curryImpl<f extends Fn<[unknown, unknown]>, arg> extends Fn {
-	return: Fn.call<f, [arg, this["arg"]]>;
+	return: $<[arg, this["arg"]], "|>", f>;
 }
-
-export type $<
-	arg0,
-	op1 extends keyof infixOperators,
-	arg1,
-	op2 extends keyof infixOperators | nil = nil,
-	arg2 = unknown,
-> = infix<[arg0, op1, arg1, ...(op2 extends nil ? [] : [op2, arg2])]>;
-type infix<args> = args extends [
-	infer arg0,
-	infer op extends keyof infixOperators,
-	infer arg1,
-	...infer rest,
-]
-	? // @ts-expect-error: cannot type-check that arg0, arg1 are valid for op
-		infix<[Fn.call<infixOperators[op], [arg0, arg1]>, ...rest]>
-	: args extends [infer only]
-		? only
-		: never;

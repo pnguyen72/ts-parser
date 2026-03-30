@@ -24,7 +24,7 @@ export interface fail<err extends string> extends Parser {
 }
 
 export type parse<p extends Parser, input extends string> =
-	Fn.call<p, input> extends infer res
+	$<input, "|>", p> extends infer res
 		? res extends Success<infer T, infer remaining>
 			? remaining extends ""
 				? T
@@ -51,7 +51,7 @@ export interface bind extends Fn<[Parser, Fn<unknown, Parser>]> {
 declare namespace bind {
 	interface impl<p extends Parser, f extends Fn<unknown, Parser>>
 		extends Parser {
-		return: Fn.call<p, this["arg"]> extends infer res
+		return: $<this["arg"], "|>", p> extends infer res
 			? res extends Success<infer T, infer remaining>
 				? Fn.fold<f, [T, remaining]>
 				: res
@@ -69,7 +69,7 @@ declare namespace both {
 }
 
 export interface map extends Fn<[Parser, Fn]> {
-	return: $<this["arg"][0], ">>=", $<success.fn, "<<", this["arg"][1]>>;
+	return: $<this["arg"][0], ">>=", $<this["arg"][1], ">>", success.fn>>;
 }
 
 export type map2<
@@ -80,7 +80,7 @@ export type map2<
 declare namespace map2 {
 	interface aux<p2 extends Parser, f extends Fn<[unknown, unknown]>>
 		extends Fn<unknown, Parser> {
-		return: $<p2, ">>=", $<success.fn, "<<", Fn.bind<f, this["arg"]>>>;
+		return: $<p2, ">>=", $<Fn.bind<f, this["arg"]>, ">>", success.fn>>;
 	}
 }
 
@@ -102,9 +102,9 @@ export interface choice extends Fn<[Parser, Parser]> {
 }
 declare namespace choice {
 	interface impl<p1 extends Parser, p2 extends Parser> extends Parser {
-		return: Fn.call<p1, this["arg"]> extends infer s extends Success
-			? s
-			: Fn.call<p2, this["arg"]>;
+		return: $<this["arg"], "|>", p1> extends infer success extends Success
+			? success
+			: $<this["arg"], "|>", p2>;
 	}
 }
 
@@ -121,7 +121,7 @@ export interface optional<p extends Parser> extends Parser {
 }
 declare namespace optional {
 	type impl<p extends Parser, input extends string> =
-		Fn.call<p, input> extends infer res
+		$<input, "|>", p> extends infer res
 			? res extends Success<infer T, infer remaining>
 				? Success<T, remaining>
 				: Success<"", input>
@@ -137,7 +137,7 @@ declare namespace many {
 		input extends string,
 		acc extends unknown[] = [],
 	> =
-		Fn.call<p, input> extends infer res
+		$<input, "|>", p> extends infer res
 			? res extends Success<infer T, infer remaining>
 				? impl<p, remaining, [...acc, T]>
 				: Success<acc, input>
@@ -149,7 +149,7 @@ declare namespace many1 {
 		return: $<
 			many<p>,
 			">>=",
-			$<success.fn, "<<", Fn.bind<List.cons, this["arg"]>>
+			$<Fn.bind<List.cons, this["arg"]>, ">>", success.fn>
 		>;
 	}
 }
@@ -173,5 +173,5 @@ export type int = $<
 		many1<str<"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9">>
 	>,
 	">>|",
-	$<Num.fromStr, "<<", List.join, "<<", List.cons>
+	$<List.cons, ">>", List.join, ">>", Num.fromStr>
 >;

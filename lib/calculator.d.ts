@@ -1,14 +1,14 @@
 import type { $, Fn } from "./helpers/function";
 import type * as List from "./helpers/list";
 import type * as Num from "./helpers/number";
-import type { parse as _parse, int, many, Parser, spaces, str } from "./parser";
+import type { int, many, Parser, parse, spaces, str } from "./parser";
 
-export type parse<input extends string> = _parse<expr, input>;
+export type evaluate<input extends string> = parse<expr, input>;
 
 type token<s extends string> = $<str<s>, "<*", spaces>;
 
 interface factor extends Parser {
-	return: Fn.call<$<int, "<*", spaces, "||", group>, this["arg"]>;
+	return: $<this["arg"], "|>", $<int, "<*", spaces, "||", group>>;
 }
 
 type group = $<token<"(">, "*>", expr, "<*", token<")">>;
