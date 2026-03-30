@@ -19,6 +19,14 @@ type infix<args> = args extends [
 		? only
 		: never;
 
+declare global {
+	interface infixOperators {
+		">>": Fn.chain;
+		"|>": Fn.apply;
+		"||>": Fn.bind;
+	}
+}
+
 export interface Fn<Arg = unknown, Return = unknown> {
 	arg: Arg;
 	_RT: Return;
@@ -65,16 +73,8 @@ export namespace Fn {
 		return: curryImpl<f, this["arg"]>;
 	}
 
-	export type bind<
-		f extends Fn<[unknown, unknown]>,
-		arg extends f["arg"][0],
-	> = call<curry<f>, arg>;
-}
-
-declare global {
-	interface infixOperators {
-		">>": Fn.chain;
-		"|>": Fn.apply;
+	export interface bind extends Fn<[unknown, Fn<[unknown, unknown]>]> {
+		return: bindImpl<this["arg"][0], this["arg"][1]>;
 	}
 }
 
@@ -85,5 +85,10 @@ interface chainImpl<f extends Fn, g extends Fn> extends Fn<f["arg"], g["_RT"]> {
 }
 
 interface curryImpl<f extends Fn<[unknown, unknown]>, arg> extends Fn {
-	return: $<[arg, this["arg"]], "|>", f>;
+	return: Fn.call<f, [arg, this["arg"]]>;
 }
+
+type bindImpl<
+	arg extends f["arg"][0],
+	f extends Fn<[unknown, unknown]>,
+> = Fn.call<Fn.curry<f>, arg>;

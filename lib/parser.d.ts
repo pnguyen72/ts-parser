@@ -80,7 +80,7 @@ export type map2<
 declare namespace map2 {
 	interface aux<p2 extends Parser, f extends Fn<[unknown, unknown]>>
 		extends Fn<unknown, Parser> {
-		return: $<p2, ">>=", $<Fn.bind<f, this["arg"]>, ">>", success>>;
+		return: $<p2, ">>=", $<this["arg"], "||>", f, ">>", success>>;
 	}
 }
 
@@ -140,11 +140,7 @@ declare namespace many {
 export type many1<p extends Parser> = $<p, ">>=", many1.aux<p>>;
 declare namespace many1 {
 	interface aux<p extends Parser> extends Fn<unknown, Parser> {
-		return: $<
-			many<p>,
-			">>=",
-			$<Fn.bind<List.cons, this["arg"]>, ">>", success>
-		>;
+		return: $<many<p>, ">>=", $<this["arg"], "||>", List.cons, ">>", success>>;
 	}
 }
 
