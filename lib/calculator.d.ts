@@ -1,84 +1,80 @@
-import type { $, Fn } from "./helpers/function";
-import type * as List from "./helpers/list";
-import type * as Num from "./helpers/number";
-import type { char, many, many1, maybe, Parser, parse, spaces } from "./parser";
+import type { $, Fn, Fn2, List, Num } from "./helpers";
+import type { char, many, many1, maybe, Parser, parse, pure } from "./parser";
 
 export type evaluate<input extends string> = parse<
-	$<spaces, "->", expr>,
+	$<spaces, "*>", expression>,
 	input
 >;
 
-/* Helpers */
+/* Tokens */
 
-type token<p extends Parser> = $<p, "<-", spaces>;
+type spaces = many<$<char<" ">, "<|>", char<"\t">, "<|>", char<"\n">>>;
+type token<p extends Parser> = $<p, "<*", spaces>;
 type charTok<s extends string> = token<char<s>>;
 
-type chain<head extends Parser, tail extends Parser> = $<
-	head,
-	">>=",
-	chain.loop<tail>
+type num = token<
+	$<
+		$<num.digits, "<&>", num.decimals>,
+		">>|",
+		$<List.concat, ">>", List.toStr, ">>", Num.fromStr>
+	>
 >;
-declare namespace chain {
-	interface loop<tail extends Parser> extends Fn<number, Parser> {
-		return: $<many<tail>, ">>|", List.fold<Fn.apply, this["arg"]>>;
+declare namespace num {
+	type digits = many1<
+		char<"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9">
+	>;
+	type decimals = maybe<$<char<".">, "<&>", digits, ">>|", List.cons>, []>;
+}
+
+type sign<p extends Parser<number>> = $<
+	$<many<charTok<"+" | "-">>, "<&>", p>,
+	">>|",
+	sign.apply
+>;
+declare namespace sign {
+	interface apply extends Fn<[unknown, number]> {
+		return: List.foldRight<aux, this["arg"][0], this["arg"][1]>;
+	}
+	interface aux extends Fn<["+" | "-", number]> {
+		return: $<this["arg"][0] extends "-" ? -1 : 1, "*", this["arg"][1]>;
 	}
 }
 
-/* Number parser */
+type parens<p extends Parser> = $<charTok<"(">, "*>", p, "<*", charTok<")">>;
 
-type digits = many1<
-	char<"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9">
->;
-type decimals = $<char<".">, "<&>", digits, ">>|", List.cons>;
-type num = $<
-	$<digits, "<&>", maybe<decimals, []>>,
-	">>|",
-	$<List.concat, ">>", List.join, ">>", Num.fromStr>
->;
+type add = $<charTok<"+">, "*>", $<Fn.curry<Num.add>, "|>", pure>>;
+type mul = $<charTok<"*">, "*>", $<Fn.curry<Num.multiply>, "|>", pure>>;
+type sub = $<charTok<"-">, "*>", $<Fn.curry<Num.subtract>, "|>", pure>>;
+type div = $<charTok<"/">, "*>", $<Fn.curry<Num.divide>, "|>", pure>>;
+type implicitMul = $<Fn.curry<Num.multiply>, "|>", pure>;
 
-/* Grammar (from highest to lowest precedence) */
+/* Grammar */
 
+// group = parens<expression>, but wrapped in an interface to allow mutual recursion
 interface group extends Parser {
-	return: $<this["arg"], "|>", $<charTok<"(">, "->", expr, "<-", charTok<")">>>;
+	return: $<parens<expression>, "<|", this["arg"]>;
 }
+type factor = sign<$<num, "<|>", group>>;
+type juxtapos = chain<factor, implicitMul, group>;
+type term = chain<juxtapos, $<mul, "<|>", div>>;
+type expression = chain<term, $<add, "<|>", sub>>;
 
-type factor = $<
-	$<factor.signs, "<&>", $<token<num>, "<|>", group>>,
-	">>|",
-	factor.applySigns
->;
-declare namespace factor {
-	type signs = many<charTok<"+" | "-">>;
-	interface applySigns extends Fn<[unknown, number], number> {
-		return: $<List.fold<applySign, this["arg"][1]>, "<|", this["arg"][0]>;
+type chain<
+	arg extends Parser,
+	op extends Parser<Fn2>,
+	loopArg extends Parser = arg,
+> = $<arg, ">>=", chain.loop<op, loopArg>>;
+declare namespace chain {
+	interface loop<op extends Parser<Fn2>, arg extends Parser> extends Fn {
+		return: $<
+			many<$<op, "<&>", arg>>,
+			">>|",
+			List.foldLeft<applyOp, this["arg"]>
+		>;
 	}
-	interface applySign extends Fn<[number, "+" | "-" | ""], number> {
-		return: $<this["arg"][0], "*", multiplier[this["arg"][1]]>;
+	interface applyOp extends Fn<[unknown, [Fn2, unknown]]> {
+		return: this["arg"] extends [infer acc, [infer f, infer arg]]
+			? $<f, "<|", acc, "<|", arg>
+			: never;
 	}
-	type multiplier = { "+": 1; "-": -1; "": 1 };
 }
-
-type juxtapos = $<factor, ">>=", juxtapos.loop>;
-declare namespace juxtapos {
-	interface loop extends Fn<number, Parser> {
-		return: $<many<group>, ">>|", List.fold<Num.multiply, this["arg"]>>;
-	}
-}
-
-type term = chain<
-	juxtapos,
-	$<
-		$<charTok<"*">, "->", juxtapos, ">>|", Fn.curry<Num.multiply>>,
-		"<|>",
-		$<charTok<"/">, "->", juxtapos, ">>|", Fn.curry<Fn.flip<Num.divide>>>
-	>
->;
-
-type expr = chain<
-	term,
-	$<
-		$<charTok<"+">, "->", term, ">>|", Fn.curry<Num.add>>,
-		"<|>",
-		$<charTok<"-">, "->", term, ">>|", Fn.curry<Fn.flip<Num.subtract>>>
-	>
->;

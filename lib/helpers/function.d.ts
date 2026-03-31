@@ -17,12 +17,17 @@ declare global {
 	}
 }
 
-export interface Fn<Arg = unknown, Return = unknown> {
-	arg: Arg;
+// ret doesn't do anything, just to allow type annotation for readability
+export interface Fn<arg = unknown, ret = unknown> {
+	arg: arg;
 	return: unknown;
-	// doesn't do anything, just to allow annotating return type for readability
-	_return: Return;
+	_ret: ret;
 }
+
+export type Fn2<arg1 = unknown, arg2 = unknown, ret = unknown> = Fn<
+	arg1,
+	Fn<arg2, ret>
+>;
 
 export namespace Fn {
 	export interface id<T = unknown> extends Fn<T> {
@@ -48,8 +53,7 @@ export namespace Fn {
 		return: chainImpl<this["arg"][0], this["arg"][1]>;
 	}
 
-	export interface curry<f extends Fn<[unknown, unknown]>>
-		extends Fn<f["arg"][0]> {
+	export interface curry<f extends Fn<[unknown, unknown]>> extends Fn2 {
 		return: curryImpl<f, this["arg"]>;
 	}
 
@@ -61,11 +65,12 @@ export namespace Fn {
 type callImpl<f extends Fn, arg> = (f & { arg: arg })["return"];
 
 interface chainImpl<f extends Fn, g extends Fn>
-	extends Fn<f["arg"], g["_return"]> {
+	extends Fn<f["arg"], g["_ret"]> {
 	return: $<this["arg"], "|>", f, "|>", g>;
 }
 
-interface curryImpl<f extends Fn<[unknown, unknown]>, arg> extends Fn {
+interface curryImpl<f extends Fn<[unknown, unknown]>, arg>
+	extends Fn2<f["arg"][0], f["arg"][1], f["_ret"]> {
 	return: callImpl<f, [arg, this["arg"]]>;
 }
 
