@@ -105,6 +105,12 @@ declare namespace both {
 
 /* Basic parsers */
 
+export type maybe<p extends Parser, defaultValue> = $<
+	p,
+	"<|>",
+	$<success, "<|", defaultValue>
+>;
+
 export interface many<p extends Parser> extends Parser {
 	return: many.impl<p, this["arg"]>;
 }
@@ -124,17 +130,17 @@ declare namespace many {
 export type many1<p extends Parser> = $<p, ">>=", many1.aux<p>>;
 declare namespace many1 {
 	interface aux<p extends Parser> extends Fn<unknown, Parser> {
-		return: $<many<p>, ">>=", $<this["arg"], "<|>>", List.cons, ">>", success>>;
+		return: $<many<p>, ">>=", $<this["arg"], "||>", List.cons, ">>", success>>;
 	}
 }
 
 export type spaces = $<
-	many<$<str<" ">, "<|>", str<"\t">, "<|>", str<"\n">>>,
+	many<$<char<" ">, "<|>", char<"\t">, "<|>", char<"\n">>>,
 	">>|",
 	Fn.constant<never>
 >;
 
-export interface str<s extends string> extends Parser {
+export interface char<s extends string> extends Parser {
 	return: this["arg"] extends `${infer matched extends s}${infer remaining}`
 		? Success<matched, remaining>
 		: Failure<`Expected ${s}`>;

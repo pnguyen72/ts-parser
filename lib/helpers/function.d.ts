@@ -13,7 +13,7 @@ declare global {
 		">>": Fn.chain;
 		"<|": Fn.call;
 		"|>": Fn.apply;
-		"<|>>": Fn.bind;
+		"||>": Fn.bind;
 	}
 }
 

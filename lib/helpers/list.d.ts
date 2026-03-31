@@ -27,3 +27,12 @@ export interface cons extends Fn<[unknown, unknown]> {
 		? [head, ...tail]
 		: never;
 }
+
+export interface concat extends Fn<[unknown, unknown]> {
+	return: this["arg"] extends [
+		infer head extends unknown[],
+		infer tail extends unknown[],
+	]
+		? [...head, ...tail]
+		: this["arg"]
+}
