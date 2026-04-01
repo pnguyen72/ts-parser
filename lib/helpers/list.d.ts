@@ -1,27 +1,22 @@
 import type { $, Fn } from "./function.d.ts";
 
-export interface toStr extends Fn {
-	return: toStr.impl<this["arg"]>;
-}
-declare namespace toStr {
-	type impl<l, acc extends string = ""> = l extends [
-		infer head extends string | number,
-		...infer tail,
-	]
-		? impl<tail, `${acc}${head}`>
-		: acc;
+export interface singleton extends Fn {
+	return: [this["arg"]];
 }
 
-export interface foldLeft<
+export type foldLeft<
 	f extends Fn<[unknown, unknown]>,
 	acc extends f["arg"][0],
-> extends Fn {
-	return: foldLeft.impl<f, acc, this["arg"]>;
-}
+	l = never,
+> = [l] extends [never] ? foldLeft.fn<f, acc> : foldLeft.impl<f, acc, l>;
 declare namespace foldLeft {
 	type impl<f extends Fn, acc, l> = l extends [infer head, ...infer tail]
 		? impl<f, $<f, "<|", [acc, head]>, tail>
 		: acc;
+	interface fn<f extends Fn<[unknown, unknown]>, acc extends f["arg"][0]>
+		extends Fn {
+		return: impl<f, acc, this["arg"]>;
+	}
 }
 
 export type foldRight<

@@ -1,6 +1,4 @@
-import type { $, Fn, List } from "./helpers/";
-
-/* Parser definition & basic operations */
+import type { $, Fn, List, Str } from "./helpers/";
 
 export type parse<p extends Parser, input extends string> =
 	$<p, "<|", input> extends infer res
@@ -10,6 +8,8 @@ export type parse<p extends Parser, input extends string> =
 				: Failure<[result, `Discarded ${remaining}`]>
 			: res
 		: never;
+
+/* Parser monad definition */
 
 // Passing _T into Success causes wrong type inference.
 // But just keep it to allow type annotation for readability
@@ -32,6 +32,10 @@ declare namespace pure {
 	}
 }
 
+export interface fail<error> extends Parser {
+	return: Failure<error>;
+}
+
 export interface bind extends Fn<[Parser, Fn<unknown, Parser>]> {
 	return: bind.impl<this["arg"][0], this["arg"][1]>;
 }
@@ -44,12 +48,6 @@ declare namespace bind {
 				: res
 			: never;
 	}
-}
-
-export interface char<s extends string> extends Parser {
-	return: this["arg"] extends `${infer matched extends s}${infer remaining}`
-		? Success<matched, remaining>
-		: Failure<`Expected ${s}`>;
 }
 
 /* Combinators */
@@ -109,10 +107,11 @@ declare namespace both {
 	interface aux<p2 extends Parser> extends Fn<unknown, Parser> {
 		return: $<p2, ">>=", $<this["arg"], "|>", pair, ">>", pure>>;
 	}
-	type pair = Fn.curry<Fn.id<[unknown, unknown]>>;
+	// @ts-expect-error: curry expects Fn<[unknown, unknown]>, but id can be of any type
+	type pair = Fn.curry<Fn.id>;
 }
 
-export type maybe<p extends Parser, _default> = $<p, "<|>", pure<_default>>;
+export type optional<p extends Parser, _default> = $<p, "<|>", pure<_default>>;
 
 export interface many<p extends Parser> extends Parser {
 	return: many.impl<p, this["arg"]>;
@@ -136,3 +135,32 @@ declare namespace many1 {
 		return: $<many<p>, ">>=", $<this["arg"], "||>", List.cons, ">>", pure>>;
 	}
 }
+
+/* Basic parsers */
+
+export interface char<c extends string> extends Parser {
+	return: this["arg"] extends `${infer matched extends c}${infer remaining}`
+		? Success<matched, remaining>
+		: Failure<`Expected ${c}`>;
+}
+
+export interface notChar<c extends string> extends Parser {
+	return: this["arg"] extends `${infer head}${infer tail}`
+		? head extends c
+			? Failure<`Invalid input: ${c}`>
+			: Success<head, tail>
+		: Failure<"Unexpected end of input">;
+}
+
+export type literal<
+	s extends string,
+	acc extends Parser = pure<"">,
+> = s extends `${infer head}${infer tail}`
+	? literal<tail, $<acc, "<&>", char<head>, ">>|", Str.concat>>
+	: acc;
+
+export type spaces = many<$<char<" ">, "<|>", char<"\t">, "<|>", char<"\n">>>;
+
+export type digits = many1<
+	char<"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9">
+>;

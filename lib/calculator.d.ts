@@ -1,30 +1,34 @@
-import type { $, Fn, Fn2, List, Num } from "./helpers";
-import type { char, many, many1, maybe, Parser, parse, pure } from "./parser";
+import type { $, Fn, Fn2, List, Num, Str } from "./helpers";
+import type {
+	char,
+	digits,
+	many,
+	optional,
+	Parser,
+	parse,
+	pure,
+	spaces,
+} from "./parser";
 
-export type evaluate<input extends string> = parse<
+export type calculate<input extends string> = parse<
 	$<spaces, "*>", expression>,
 	input
 >;
 
 /* Tokens */
 
-type spaces = many<$<char<" ">, "<|>", char<"\t">, "<|>", char<"\n">>>;
 type token<p extends Parser> = $<p, "<*", spaces>;
-type charTok<s extends string> = token<char<s>>;
+type charTok<c extends string> = token<char<c>>;
 
 type num = token<
 	$<
-		$<num.digits, "<&>", num.decimals>,
+		digits,
+		"<&>",
+		optional<$<char<".">, "<&>", digits, ">>|", List.cons>, []>,
 		">>|",
-		$<List.concat, ">>", List.toStr, ">>", Num.fromStr>
+		$<List.concat, ">>", Str.fromList, ">>", Num.fromStr>
 	>
 >;
-declare namespace num {
-	type digits = many1<
-		char<"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9">
-	>;
-	type decimals = maybe<$<char<".">, "<&>", digits, ">>|", List.cons>, []>;
-}
 
 type sign<p extends Parser<number>> = $<
 	$<many<charTok<"+" | "-">>, "<&>", p>,
@@ -59,7 +63,7 @@ type juxtapos = chain<factor, implicitMul, group>;
 type term = chain<juxtapos, $<mul, "<|>", div>>;
 type expression = chain<term, $<add, "<|>", sub>>;
 
-type chain<
+export type chain<
 	arg extends Parser,
 	op extends Parser<Fn2>,
 	loopArg extends Parser = arg,

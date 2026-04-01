@@ -1,4 +1,4 @@
-import type { Add, Divide, Multiply, Subtract } from "ts-arithmetic";
+import type { Add, Divide, Multiply, Pow, Subtract } from "ts-arithmetic";
 import type { Fn } from "./function";
 
 export interface fromStr extends Fn<string, number> {
@@ -20,6 +20,7 @@ declare global {
 		"-": subtract;
 		"*": multiply;
 		"/": divide;
+		"^": pow;
 	}
 }
 
@@ -37,4 +38,8 @@ export interface multiply extends Fn<[number, number], number> {
 
 export interface divide extends Fn<[number, number], number> {
 	return: Divide<this["arg"][0], this["arg"][1]>;
+}
+
+export interface pow extends Fn<[number, number], number> {
+	return: Pow<this["arg"][0], this["arg"][1]>;
 }
