@@ -88,7 +88,7 @@ type obj = $<
 	charTok<"}">
 >;
 declare namespace obj {
-	type kv = $<str, "<*", charTok<":">, "<&>", value>;
+	type kv = $<str, "<&>", $<charTok<":">, "*>", value>>;
 	interface fromList extends Fn {
 		return: this["arg"] extends infer kvPairs extends [string, unknown][]
 			? { [k in kvPairs[number][0]]: Extract<kvPairs[number], [k, unknown]>[1] }
