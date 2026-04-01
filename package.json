@@ -1,4 +1,13 @@
 {
+	"name": "ts-parser",
+	"description": "Type-level parser combinator",
+	"license": "MIT",
+	"keywords": [
+		"parser",
+		"combinator",
+		"monadic",
+		"type-level"
+	],
 	"devDependencies": {
 		"@typescript/native-preview": "7.0.0-dev.20260330.1",
 		"ts-arithmetic": "^0.1.1"
