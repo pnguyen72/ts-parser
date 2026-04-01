@@ -8,13 +8,13 @@ import type {
 	notChar,
 	optional,
 	Parser,
-	parse as parse_,
+	parse,
 	pure,
 	spaces,
 } from "@/parser";
 import type { $, Fn, List, Num, Str } from "@/utils";
 
-export type parse<s extends string> = parse_<token<value>, s>;
+export type parseJson<s extends string> = parse<token<value>, s>;
 
 /* Helpers */
 
