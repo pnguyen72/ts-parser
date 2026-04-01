@@ -1,4 +1,4 @@
-import type { $, Fn, List, Str } from "./helpers/";
+import type { $, Fn, List, Str } from "./utils/";
 
 export type parse<p extends Parser, input extends string> =
 	$<p, "<|", input> extends infer res

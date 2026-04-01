@@ -1,4 +1,3 @@
-import type { $, Fn, Fn2, List, Num, Str } from "./helpers";
 import type {
 	char,
 	digits,
@@ -8,7 +7,8 @@ import type {
 	parse,
 	pure,
 	spaces,
-} from "./parser";
+} from "@/parser";
+import type { $, Fn, Fn2, List, Num, Str } from "@/utils";
 
 export type calculate<input extends string> = parse<
 	$<spaces, "*>", expression>,

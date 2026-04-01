@@ -1,7 +1,7 @@
-import type { calculate } from "./lib/calculator";
-import type { parse } from "./lib/json";
+import type { calculate } from "./examples/arithmetic";
+import type { parse } from "./examples/json";
 
-type _calculator =
+type _arithmetic =
 	calculate<"-(-4(7-1) - 2*-3 + 1.9) + -2/3.2(2+-9) * --4(+11/2*+5)">;
 
 type _json = parse<`
@@ -20,5 +20,4 @@ type _json = parse<`
 		"ts-arithmetic": "^0.1.1"
 	}
 }
-
 `>;
