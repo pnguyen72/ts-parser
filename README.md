@@ -1,3 +1,6 @@
-Requires `tsgo`; `tsc` cannot handle the recursion depth.
+Parser combinator in type-level TypeScript, with usage examples:
 
-Only handles parsing; actual calculations are delegated to [ts-arithmetic](https://github.com/arielhs/ts-arithmetic).
+- Arithmetic parser (only handles parsing; actual calculations are delegated to [ts-arithmetic](https://github.com/arielhs/ts-arithmetic))
+- JSON parser
+
+Requires `tsgo`; `tsc` cannot handle the recursion depth.
