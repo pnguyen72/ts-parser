@@ -2,7 +2,6 @@ import type {
 	char,
 	choice,
 	digits,
-	Failure,
 	fail,
 	literal,
 	many,
@@ -20,13 +19,11 @@ export type parseJson<s extends string> = parse<token<value>, s>;
 /* Main */
 
 interface value extends Parser {
-	return: this["arg"] extends ""
-		? Failure<"Empty input">
-		: $<
-				List.foldLeft<choice, fail<never>, [str, num, bool, nul, array, obj]>,
-				"<|",
-				this["arg"]
-			>;
+	return: $<
+		List.foldLeft<choice, fail, [str, num, bool, nul, array, obj]>,
+		"<|",
+		this["arg"]
+	>;
 }
 
 type str = $<
@@ -35,32 +32,32 @@ type str = $<
 	Str.fromList
 >;
 
-type num = $<$<num.base, "<&>", num.power>, ">>|", num.applyPower>;
+type num = $<
+	num.mantissa,
+	"<&>",
+	optional<$<num.exponent, ">>|", $<10, "||>", Num.pow>>, 1>,
+	">>|",
+	Num.multiply
+>;
 declare namespace num {
-	type base = $<
+	type mantissa = $<
 		$<optional<char<"-">, "">, "<&>", digits, ">>|", List.cons>,
 		"<&>",
 		optional<$<char<".">, "<&>", digits, ">>|", List.cons>, []>,
 		">>|",
 		$<List.concat, ">>", Str.fromList, ">>", Num.fromStr>
 	>;
-	type power = optional<
+	type exponent = $<
+		char<"e" | "E">,
+		"*>",
 		$<
-			char<"e" | "E">,
-			"*>",
-			$<
-				optional<$<char<"+">, "*>", pure<"">, "<|>", char<"-">>, "">,
-				"<&>",
-				digits
-			>,
-			">>|",
-			$<List.cons, ">>", Str.fromList, ">>", Num.fromStr>
+			optional<$<char<"+">, "*>", pure<"">, "<|>", char<"-">>, "">,
+			"<&>",
+			digits
 		>,
-		0
+		">>|",
+		$<List.cons, ">>", Str.fromList, ">>", Num.fromStr>
 	>;
-	interface applyPower extends Fn<[number, number]> {
-		return: $<10, "^", this["arg"][1], "*", this["arg"][0]>;
-	}
 }
 
 type bool = $<literal<"true">, "<|>", literal<"false">, ">>|", bool.fromStr>;

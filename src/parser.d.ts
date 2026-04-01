@@ -32,7 +32,7 @@ declare namespace pure {
 	}
 }
 
-export interface fail<error> extends Parser {
+export interface fail<error = never> extends Parser {
 	return: Failure<error>;
 }
 
@@ -105,10 +105,8 @@ export interface both extends Fn<[Parser, Parser]> {
 }
 declare namespace both {
 	interface aux<p2 extends Parser> extends Fn<unknown, Parser> {
-		return: $<p2, ">>=", $<this["arg"], "|>", pair, ">>", pure>>;
+		return: $<p2, ">>=", $<this["arg"], "||>", Fn.id, ">>", pure>>;
 	}
-	// @ts-expect-error: curry expects Fn<[unknown, unknown]>, but id can be of any type
-	type pair = Fn.curry<Fn.id>;
 }
 
 export type optional<p extends Parser, _default> = $<p, "<|>", pure<_default>>;

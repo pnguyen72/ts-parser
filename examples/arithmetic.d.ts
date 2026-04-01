@@ -10,7 +10,7 @@ import type {
 } from "@/parser";
 import type { $, Fn, Fn2, List, Num, Str } from "@/utils";
 
-export type calculate<input extends string> = parse<
+export type evaluate<input extends string> = parse<
 	$<spaces, "*>", expression>,
 	input
 >;
@@ -30,16 +30,16 @@ type num = token<
 	>
 >;
 
-type sign<p extends Parser<number>> = $<
+type signed<p extends Parser<number>> = $<
 	$<many<charTok<"+" | "-">>, "<&>", p>,
 	">>|",
-	sign.apply
+	signed.applySigns
 >;
-declare namespace sign {
-	interface apply extends Fn<[unknown, number]> {
-		return: List.foldRight<aux, this["arg"][0], this["arg"][1]>;
+declare namespace signed {
+	interface applySigns extends Fn<[unknown, number]> {
+		return: List.foldRight<apply, this["arg"][0], this["arg"][1]>;
 	}
-	interface aux extends Fn<["+" | "-", number]> {
+	interface apply extends Fn<["+" | "-", number]> {
 		return: $<this["arg"][0] extends "-" ? -1 : 1, "*", this["arg"][1]>;
 	}
 }
@@ -58,12 +58,12 @@ type implicitMul = pure<Fn.curry<Num.multiply>>;
 interface group extends Parser {
 	return: $<parens<expression>, "<|", this["arg"]>;
 }
-type factor = sign<$<num, "<|>", group>>;
+type factor = signed<$<num, "<|>", group>>;
 type juxtapos = chain<factor, implicitMul, group>;
 type term = chain<juxtapos, $<mul, "<|>", div>>;
 type expression = chain<term, $<add, "<|>", sub>>;
 
-export type chain<
+type chain<
 	arg extends Parser,
 	op extends Parser<Fn2>,
 	loopArg extends Parser = arg,
