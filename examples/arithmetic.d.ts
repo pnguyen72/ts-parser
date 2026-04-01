@@ -46,11 +46,11 @@ declare namespace sign {
 
 type parens<p extends Parser> = $<charTok<"(">, "*>", p, "<*", charTok<")">>;
 
-type add = $<charTok<"+">, "*>", $<Fn.curry<Num.add>, "|>", pure>>;
-type mul = $<charTok<"*">, "*>", $<Fn.curry<Num.multiply>, "|>", pure>>;
-type sub = $<charTok<"-">, "*>", $<Fn.curry<Num.subtract>, "|>", pure>>;
-type div = $<charTok<"/">, "*>", $<Fn.curry<Num.divide>, "|>", pure>>;
-type implicitMul = $<Fn.curry<Num.multiply>, "|>", pure>;
+type add = $<charTok<"+">, "*>", pure<Fn.curry<Num.add>>>;
+type mul = $<charTok<"*">, "*>", pure<Fn.curry<Num.multiply>>>;
+type sub = $<charTok<"-">, "*>", pure<Fn.curry<Num.subtract>>>;
+type div = $<charTok<"/">, "*>", pure<Fn.curry<Num.divide>>>;
+type implicitMul = pure<Fn.curry<Num.multiply>>;
 
 /* Grammar */
 
