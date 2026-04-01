@@ -16,8 +16,18 @@ import type { $, Fn, List, Num, Str } from "@/utils";
 
 export type parse<s extends string> = parse_<token<value>, s>;
 
+/* Helpers */
+
 type token<p extends Parser> = $<spaces, "*>", p, "<*", spaces>;
 type charTok<c extends string> = token<char<c>>;
+
+type sequence<p extends Parser> = $<
+	$<p, "<&>", many<$<charTok<",">, "*>", p>>>,
+	">>|",
+	List.cons
+>;
+
+/* Main */
 
 interface value extends Parser {
 	return: $<
@@ -76,7 +86,7 @@ type nul = $<literal<"null">, ">>|", Fn.constant<null>>;
 type array = $<
 	charTok<"[">,
 	"*>",
-	many<$<value, "<*", charTok<",">, "<|>", value>>,
+	optional<sequence<value>, []>,
 	"<*",
 	charTok<"]">
 >;
@@ -84,7 +94,7 @@ type array = $<
 type obj = $<
 	charTok<"{">,
 	"*>",
-	$<many<$<obj.kv, "<*", charTok<",">, "<|>", obj.kv>>, ">>|", obj.fromList>,
+	optional<$<sequence<obj.kv>, ">>|", obj.fromList>, {}>,
 	"<*",
 	charTok<"}">
 >;
