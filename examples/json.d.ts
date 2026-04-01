@@ -1,10 +1,11 @@
 import type {
 	char,
 	choice,
+	digits,
+	Failure,
 	fail,
 	literal,
 	many,
-	many1,
 	notChar,
 	optional,
 	Parser,
@@ -16,25 +17,16 @@ import type { $, Fn, List, Num, Str } from "@/utils";
 
 export type parseJson<s extends string> = parse<token<value>, s>;
 
-/* Helpers */
-
-type token<p extends Parser> = $<spaces, "*>", p, "<*", spaces>;
-type charTok<c extends string> = token<char<c>>;
-
-type sequence<p extends Parser> = $<
-	$<p, "<&>", many<$<charTok<",">, "*>", p>>>,
-	">>|",
-	List.cons
->;
-
 /* Main */
 
 interface value extends Parser {
-	return: $<
-		List.foldLeft<choice, fail<"Empty">, [str, num, bool, nul, array, obj]>,
-		"<|",
-		this["arg"]
-	>;
+	return: this["arg"] extends ""
+		? Failure<"Empty input">
+		: $<
+				List.foldLeft<choice, fail<never>, [str, num, bool, nul, array, obj]>,
+				"<|",
+				this["arg"]
+			>;
 }
 
 type str = $<
@@ -45,9 +37,6 @@ type str = $<
 
 type num = $<$<num.base, "<&>", num.power>, ">>|", num.applyPower>;
 declare namespace num {
-	type digits = many1<
-		char<"0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9">
-	>;
 	type base = $<
 		$<optional<char<"-">, "">, "<&>", digits, ">>|", List.cons>,
 		"<&>",
@@ -106,3 +95,14 @@ declare namespace obj {
 			: never;
 	}
 }
+
+/* Helpers */
+
+type token<p extends Parser> = $<spaces, "*>", p, "<*", spaces>;
+type charTok<c extends string> = token<char<c>>;
+
+type sequence<p extends Parser> = $<
+	$<p, "<&>", many<$<charTok<",">, "*>", p>>>,
+	">>|",
+	List.cons
+>;

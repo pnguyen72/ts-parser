@@ -14,11 +14,11 @@ export type parse<p extends Parser, input extends string> =
 // Passing _T into Success causes wrong type inference.
 // But just keep it to allow type annotation for readability
 export type Parser<_T = unknown> = Fn<string, Success | Failure>;
-type Success<result = unknown, remaining extends string = string> = {
+export type Success<result = unknown, remaining extends string = string> = {
 	result: result;
 	remaining: remaining;
 };
-type Failure<error = unknown> = { error: error };
+export type Failure<error = unknown> = { error: error };
 
 export type pure<result = never> = [result] extends [never]
 	? pure.fn
